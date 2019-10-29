@@ -37,11 +37,9 @@ class fitscard:
     def format(self):
         card = None
         format = None
-        string_format = "%-8s= %-20s / %s"
-        number_format = "%-8s= %20s / %s"
-        #hierarch_string_format = "%-29s= %-12s / %s"
-        #hierarch_number_format = "%-29s= %12s / %s"
-        hierarch_format = "%s = %s / %s"
+        string_format = "%-8s= %-20s"
+        number_format = "%-8s= %20s"
+        hierarch_format = "%s = %s"
 
         self._keyword = self._keyword.upper()
         if self._keyword == 'CONTINUE':
@@ -61,12 +59,8 @@ class fitscard:
 
             if is_hierarch:
                 format = hierarch_format
-                # self._keyword += ' '
-                # if is_string:
-                #     format = hierarch_string_format
-                # else:
-                #     format = hierarch_number_format
 
-            card = format % (self._keyword, self._value, self._comment)
+            card = format % (self._keyword, self._value)
+            card = "%s / %s" % (card, self._comment) if self._comment
     
         return card[:80].ljust(80)

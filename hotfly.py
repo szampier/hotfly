@@ -59,7 +59,7 @@ def getHdrver(fileId):
     global hdrver
     
     cur = dbcon.cursor()
-    query = """select convert(char(10), last_mod_date, 'yyyy-mm-dd')
+    query = """select replace(convert(char(23), getdate(), 121), ' ', 'T')
     from dbcm.dp_tracking where dp_id = '%s'""" % fileId
     cur.execute(query, select=False)
     res = cur.fetchall()
