@@ -1,31 +1,41 @@
 import re
 
 class fitscard:
+
     def __init__(self, keyword=None, value=None, type=None, comment=None, image=None):
         self._keyword = keyword
         self._value = value
         self._type = type
-        self._comment = comment
+        self._comment = comment.strip() if comment != None else None
         self._image = image
         if self._image: self._parse()
-    
+
     def _parse(self):
-        self._keyword, value_and_comment = map(lambda x : x.strip(), self._image.split('=', 1))
-        
-        if value_and_comment[0] in ['T', 'F']:
-            self._type = 'B'
-            self._value = value_and_comment[0]
-            self._parse_comment(value_and_comment[1:])
-        elif value_and_comment[0] == "'":
-            self._type = 'C'
-            self._parse_string_value_and_comment(value_and_comment)
+        kwd = self._image[:8].strip()
+        if kwd == 'CONTINUE':
+            self._keyword = kwd
+            self._comment = self._image[8:].strip()
+        elif kwd == 'HISTORY' or kwd == 'COMMENT':
+            self._keyword = kwd
+            self._value = self._image[8:].strip()
         else:
-            self._type = 'F'
-            self._value, self._comment = map(lambda x : x.strip(), value_and_comment.split('/', 1))
-    
-    def _parse_comment(self, comment):
+            self._keyword, value_and_comment = map(lambda x : x.strip(), self._image.split('=', 1))
+            firstchar = value_and_comment[0]
+            if firstchar in ['T', 'F']:
+                self._type = 'B'
+                self._value = firstchar
+                self._parse_comment(value_and_comment)
+            elif firstchar == "'":
+                self._type = 'C'
+                self._parse_string_value_and_comment(value_and_comment)
+            else:
+                self._type = 'F'
+                self._value = value_and_comment.split('/', 1)[0].strip()
+                self._parse_comment(value_and_comment)
+
+    def _parse_comment(self, value_and_comment):
         try:
-            self._comment = comment.split('/', 1)[1].strip()
+            self._comment = value_and_comment.split('/', 1)[1].strip()
         except:
             pass
 
@@ -33,6 +43,18 @@ class fitscard:
         m = re.search("([^']|'')*", value_and_comment[1:])
         self._value = m.group(0).replace("''", "'")
         self._parse_comment(value_and_comment[len(self._value)+2:])
+
+    def keyword(self):
+        return self._keyword
+
+    def value(self):
+        return self._value
+
+    def type(self):
+        return self._type
+
+    def comment(self):
+        return self._comment
 
     def format(self):
         card = None
@@ -61,6 +83,6 @@ class fitscard:
                 format = hierarch_format
 
             card = format % (self._keyword, self._value)
-            card = "%s / %s" % (card, self._comment) if self._comment
+            if self._comment: card = "%s / %s" % (card, self._comment)
     
         return card[:80].ljust(80)

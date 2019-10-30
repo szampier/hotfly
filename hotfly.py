@@ -30,6 +30,8 @@ KEYWORDS_FROM_FILE = [
 
 NOT_KEYWORDS_FROM_DB = KEYWORDS_FROM_FILE + ["HDRVER","CHECKSUM","ZHECKSUM","END"," "]
 
+hasSkippedFirstHdu = False
+
 def log(msg):
     if debug:
         print >> sys.stderr, msg
@@ -59,7 +61,7 @@ def getHdrver(fileId):
     global hdrver
     
     cur = dbcon.cursor()
-    query = """select replace(convert(char(23), getdate(), 121), ' ', 'T')
+    query = """select replace(convert(char(23), last_mod_date, 121), ' ', 'T')
     from dbcm.dp_tracking where dp_id = '%s'""" % fileId
     cur.execute(query, select=False)
     res = cur.fetchall()
@@ -128,16 +130,19 @@ def readHeader(inputFile, block):
         block = readBlock(inputFile)
     raise Exception('END not found')
 
-def skipFirstHdu(header):
+def shouldSkipFirstHdu(header):
     for card in header:
         if card[:len(ARCFILE)] == ARCFILE:
             return False
     return True
 
 def writeHeader(outputFile, header, dbHeader, hduNum):
+    global hasSkippedFirstHdu
+
     numCards = 0
-    if hduNum == 0 and skipFirstHdu(header):
+    if hduNum == 0 and not hasSkippedFirstHdu and shouldSkipFirstHdu(header):
         log('skipping first hdu')
+        hasSkippedFirstHdu = True
         hduNum = -1
         for card in header:
             kwd = card[:8].strip()
@@ -148,11 +153,13 @@ def writeHeader(outputFile, header, dbHeader, hduNum):
         for card in header:
             kwd = card[:8].strip()
             # PCOUNT and GCOUNT must not be in primary HDU
-            pgCountInPrimaryHdu = (kwd in ['PCOUNT','GCOUNT'] and hduNum == 0)
-            if kwd in KEYWORDS_FROM_FILE and not pgCountInPrimaryHdu:
+            if kwd in ['PCOUNT','GCOUNT'] and hduNum == 0 and not hasSkippedFirstHdu:
+                pass
+            elif kwd in KEYWORDS_FROM_FILE:
                 fitsCard = fitscard(image = card)
                 outputFile.write(fitsCard.format())
                 numCards += 1
+
             if card == END:
                 for dbCard in dbHeader:
                     if hduNum == 0 and dbCard == END:
@@ -161,7 +168,8 @@ def writeHeader(outputFile, header, dbHeader, hduNum):
                         numCards += 2
                     outputFile.write(dbCard)
                     numCards += 1
-    numSpaces = BLOCKSIZE - ((numCards * CARDSIZE) % BLOCKSIZE)
+    lastBlockSize = ((numCards * CARDSIZE) % BLOCKSIZE)
+    numSpaces = BLOCKSIZE - lastBlockSize if lastBlockSize > 0 else 0
     outputFile.write(' ' * numSpaces)
     return (hduNum + 1)
 
