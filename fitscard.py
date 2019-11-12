@@ -1,5 +1,6 @@
 import re
 
+
 class fitscard:
 
     def __init__(self, keyword=None, value=None, type=None, comment=None, image=None):
@@ -19,7 +20,7 @@ class fitscard:
             self._keyword = kwd
             self._value = self._image[8:].strip()
         else:
-            self._keyword, value_and_comment = map(lambda x : x.strip(), self._image.split('=', 1))
+            self._keyword, value_and_comment = map(lambda x: x.strip(), self._image.split('=', 1))
             firstchar = value_and_comment[0]
             if firstchar in ['T', 'F']:
                 self._type = 'B'
@@ -42,7 +43,7 @@ class fitscard:
     def _parse_string_value_and_comment(self, value_and_comment):
         m = re.search("([^']|'')*", value_and_comment[1:])
         self._value = m.group(0).replace("''", "'")
-        self._parse_comment(value_and_comment[len(self._value)+2:])
+        self._parse_comment(value_and_comment[len(self._value) + 2:])
 
     def keyword(self):
         return self._keyword
@@ -65,12 +66,12 @@ class fitscard:
         self._keyword = self._keyword.upper()
         if self._keyword == 'CONTINUE':
             card = self._keyword + ' ' + self._comment
-        elif self._keyword in ['COMMENT','HISTORY']:
+        elif self._keyword in ['COMMENT', 'HISTORY']:
             card = self._keyword + ' ' + self._value
         else:
             is_string = True if self._type in ['C', 'T'] else False
             is_hierarch = True if self._keyword[:8] == 'HIERARCH' else False
-            
+
             if is_string:
                 self._value = "'%-8s'" % self._value.replace("'", "''")
                 format = string_format
@@ -86,5 +87,5 @@ class fitscard:
 
             card = format % (self._keyword, self._value)
             if self._comment: card = "%s / %s" % (card, self._comment)
-    
+
         return card[:80].ljust(80)

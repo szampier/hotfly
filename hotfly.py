@@ -11,33 +11,37 @@ VERSION = '2.0'
 
 BLOCKSIZE = 2880
 CARDSIZE = 80
-SIMPLE   = 'SIMPLE  ='
-PCOUNT   = 'PCOUNT  ='
-GCOUNT   = 'GCOUNT  ='
+SIMPLE = 'SIMPLE  ='
+PCOUNT = 'PCOUNT  ='
+GCOUNT = 'GCOUNT  ='
 XTENSION = 'XTENSION='
-ARCFILE  = 'ARCFILE ='
+ARCFILE = 'ARCFILE ='
 END = 'END'.ljust(80)
 
 KEYWORDS_FROM_FILE = [
-    "SIMPLE","XTENSION","BITPIX","NAXIS","NAXIS1","NAXIS2","NAXIS3","NAXIS4", 
-    "NAXIS5","NAXIS6","NAXIS7","NAXIS8","NAXIS9","EXTEND","PCOUNT","GCOUNT",
-    "TFIELDS","TTYPE1","TFORM1","ZIMAGE","ZCMPTYPE","ZBITPIX","ZNAXIS","ZNAXIS1","ZNAXIS2",
-    "ZNAXIS3","ZNAXIS4","ZNAXIS5","ZNAXIS6","ZNAXIS7","ZNAXIS8","ZNAXIS9",
-    "ZTILE1","ZTILE2","ZTILE3","ZTILE4","ZTILE5","ZTILE6","ZTILE7","ZTILE8","ZTILE9",
-    "ZVAL1","ZVAL2","ZVAL3","ZVAL4","ZVAL5","ZVAL6","ZVAL7","ZVAL8","ZVAL9",
-    "ZNAME1","ZNAME2","ZNAME3","ZNAME4","ZNAME5","ZNAME6","ZNAME7","ZNAME8","ZNAME9",
-    "ZMASKCMP","ZSIMPLE","ZTENSION","ZEXTEND","ZBLOCKED","ZPCOUNT","ZGCOUNT","DATASUM","ZDATASUM"]
+    "SIMPLE", "XTENSION", "BITPIX", "NAXIS", "NAXIS1", "NAXIS2", "NAXIS3", "NAXIS4",
+    "NAXIS5", "NAXIS6", "NAXIS7", "NAXIS8", "NAXIS9", "EXTEND", "PCOUNT", "GCOUNT",
+    "TFIELDS", "TTYPE1", "TFORM1", "ZIMAGE", "ZCMPTYPE", "ZBITPIX", "ZNAXIS", "ZNAXIS1", "ZNAXIS2",
+    "ZNAXIS3", "ZNAXIS4", "ZNAXIS5", "ZNAXIS6", "ZNAXIS7", "ZNAXIS8", "ZNAXIS9",
+    "ZTILE1", "ZTILE2", "ZTILE3", "ZTILE4", "ZTILE5", "ZTILE6", "ZTILE7", "ZTILE8", "ZTILE9",
+    "ZVAL1", "ZVAL2", "ZVAL3", "ZVAL4", "ZVAL5", "ZVAL6", "ZVAL7", "ZVAL8", "ZVAL9",
+    "ZNAME1", "ZNAME2", "ZNAME3", "ZNAME4", "ZNAME5", "ZNAME6", "ZNAME7", "ZNAME8", "ZNAME9",
+    "ZMASKCMP", "ZSIMPLE", "ZTENSION", "ZEXTEND", "ZBLOCKED", "ZPCOUNT", "ZGCOUNT", "DATASUM", "ZDATASUM",
+    "EXTNAME"]
 
-NOT_KEYWORDS_FROM_DB = KEYWORDS_FROM_FILE + ["HDRVER","CHECKSUM","ZHECKSUM","END"," "]
+NOT_KEYWORDS_FROM_DB = KEYWORDS_FROM_FILE + ["HDRVER", "CHECKSUM", "ZHECKSUM", "END", " "]
 
 hasSkippedFirstHdu = False
+
 
 def log(msg):
     if debug:
         print >> sys.stderr, msg
 
+
 def error(msg):
     print >> sys.stderr, msg
+
 
 def dbrcGet(alias):
     dbrcLines = open(os.getenv('HOME') + '/.dbrc').readlines()
@@ -47,19 +51,22 @@ def dbrcGet(alias):
             return (items[0], items[2], items[3])
     raise Exception(alias + ' not found in $HOME/.dbrc')
 
+
 def connect():
     global dbcon
     server, user, password = dbrcGet('HEADONFLY')
     log('connecting to %s as user %s' % (server, user))
     dbcon = Sybase.connect(server, user, password)
 
+
 def disconnect():
     if dbcon:
         dbcon.close()
 
+
 def getHdrver(fileId):
     global hdrver
-    
+
     cur = dbcon.cursor()
     query = """select replace(convert(char(23), last_mod_date, 121), ' ', 'T')
     from dbcm.dp_tracking where dp_id = '%s'""" % fileId
@@ -70,15 +77,18 @@ def getHdrver(fileId):
         hdrver = res[0][0]
     else:
         raise Exception('%s not found in repository' % fileId)
-    
+
+
 def makeHdrverCard():
     fitsCard = fitscard(keyword='HDRVER', value=hdrver, type='T', comment='ESO Archive header timetag')
     return fitsCard.format()
+
 
 def makeProcessedByHotflyCard():
     comment = 'processed by hotfly version %s on %s UT' % (VERSION, datetime.utcnow().isoformat()[:23])
     fitsCard = fitscard(keyword='COMMENT', value=comment)
     return fitsCard.format()
+
 
 def getHeaderFromDB(fileId):
     cur = dbcon.cursor()
@@ -104,12 +114,14 @@ def getHeaderFromDB(fileId):
             pass
     return headers
 
+
 def readBlock(inputFile):
     data = inputFile.read(BLOCKSIZE)
     size = len(data)
     if size > 0 and size != BLOCKSIZE:
         raise Exception('read %d bytes, expected %d' % (size, BLOCKSIZE))
     return data
+
 
 def copyData(inputFile, outputFile):
     while True:
@@ -119,22 +131,25 @@ def copyData(inputFile, outputFile):
         else:
             outputFile.write(data)
 
+
 def readHeader(inputFile, block):
     header = []
     while block:
         for i in range(0, BLOCKSIZE, CARDSIZE):
-            card = block[i:i+CARDSIZE]
+            card = block[i:i + CARDSIZE]
             header.append(card)
             if card == END:
                 return header
         block = readBlock(inputFile)
     raise Exception('END not found')
 
+
 def shouldSkipFirstHdu(header):
     for card in header:
         if card[:len(ARCFILE)] == ARCFILE:
             return False
     return True
+
 
 def writeHeader(outputFile, header, dbHeader, hduNum):
     global hasSkippedFirstHdu
@@ -153,10 +168,10 @@ def writeHeader(outputFile, header, dbHeader, hduNum):
         for card in header:
             kwd = card[:8].strip()
             # PCOUNT and GCOUNT must not be in primary HDU
-            if kwd in ['PCOUNT','GCOUNT'] and hduNum == 0 and not hasSkippedFirstHdu:
+            if kwd in ['PCOUNT', 'GCOUNT'] and hduNum == 0 and not hasSkippedFirstHdu:
                 pass
             elif kwd in KEYWORDS_FROM_FILE:
-                fitsCard = fitscard(image = card)
+                fitsCard = fitscard(image=card)
                 outputFile.write(fitsCard.format())
                 numCards += 1
 
@@ -173,17 +188,18 @@ def writeHeader(outputFile, header, dbHeader, hduNum):
     outputFile.write(' ' * numSpaces)
     return (hduNum + 1)
 
+
 def run(inputFile, outputFile, fileId):
     hduNum = 0
-    
+
     block = readBlock(inputFile)
     if not block:
         raise Exception('empty file')
     if block[:len(SIMPLE)] != SIMPLE:
         raise Exception('not a fits file')
-    
+
     dbHeaders = getHeaderFromDB(fileId)
-    
+
     while True:
         log('hdu %d/%d' % (hduNum, len(dbHeaders)))
         header = readHeader(inputFile, block)
@@ -193,9 +209,10 @@ def run(inputFile, outputFile, fileId):
             log('end of file')
             break
 
+
 def main():
     global debug
-    
+
     parser = argparse.ArgumentParser()
     parser.add_argument("file_id")
     parser.add_argument("-d", "--debug", action="store_true")
@@ -203,7 +220,7 @@ def main():
     parser.add_argument("-o", "--outputfile")
     args = parser.parse_args()
     debug = args.debug
-    
+
     try:
         if args.outputfile and os.path.exists(args.outputfile):
             error('file exists: %s' % args.outputfile)
@@ -217,9 +234,12 @@ def main():
     except Exception as e:
         error(str(e))
         if args.outputfile:
-            try: os.remove(args.outputfile)
-            except: pass
+            try:
+                os.remove(args.outputfile)
+            except:
+                pass
         sys.exit(1)
+
 
 if __name__ == '__main__':
     main()
