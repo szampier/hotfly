@@ -7,9 +7,10 @@ class fitscard:
         self._keyword = keyword
         self._value = value
         self._type = type
-        self._comment = comment.strip() if comment != None else None
+        self._comment = comment.strip() if comment is not None else None
         self._image = image
-        if self._image: self._parse()
+        if self._image:
+            self._parse()
 
     def _parse(self):
         kwd = self._image[:8].strip()
@@ -37,7 +38,7 @@ class fitscard:
     def _parse_comment(self, value_and_comment):
         try:
             self._comment = value_and_comment.split('/', 1)[1].strip()
-        except:
+        except Exception:
             pass
 
     def _parse_string_value_and_comment(self, value_and_comment):
@@ -86,6 +87,7 @@ class fitscard:
                     format = "%s = %s"
 
             card = format % (self._keyword, self._value)
-            if self._comment: card = "%s / %s" % (card, self._comment)
+            if self._comment:
+                card = "%s / %s" % (card, self._comment)
 
         return card[:80].ljust(80)

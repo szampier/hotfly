@@ -236,8 +236,8 @@ def main():
         if args.outputfile:
             try:
                 os.remove(args.outputfile)
-            except:
-                pass
+            except Exception:
+                error('could not remove %s' % args.outputfile)
         sys.exit(1)
 
 
