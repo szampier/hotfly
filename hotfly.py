@@ -64,15 +64,23 @@ def disconnect():
         dbcon.close()
 
 
+def execQuery(query):
+    cur = dbcon.cursor()
+    if Sybase.__version__ == '0.38':
+        cur.execute(query)
+    else:
+        cur.execute(query, select=False)
+    res = cur.fetchall()
+    cur.close()
+    return res
+
+
 def getHdrver(fileId):
     global hdrver
 
-    cur = dbcon.cursor()
     query = """select replace(convert(char(23), last_mod_date, 121), ' ', 'T')
     from dbcm.dp_tracking where dp_id = '%s'""" % fileId
-    cur.execute(query, select=False)
-    res = cur.fetchall()
-    cur.close()
+    res = execQuery(query)
     if res:
         hdrver = res[0][0]
     else:
@@ -91,13 +99,10 @@ def makeProcessedByHotflyCard():
 
 
 def getHeaderFromDB(fileId):
-    cur = dbcon.cursor()
     query = """select kw_name, kw_value, kw_type, kw_comment
     from dbcm.keywords_repository
     where dp_id = '%s' order by ext_id, kw_ind""" % fileId
-    cur.execute(query, select=False)
-    res = cur.fetchall()
-    cur.close()
+    res = execQuery(query)
     currentHeader = []
     headers = []
     for kwName, kwValue, kwType, kwComment in res:
