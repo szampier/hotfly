@@ -17,6 +17,7 @@ GCOUNT = 'GCOUNT  ='
 XTENSION = 'XTENSION='
 ARCFILE = 'ARCFILE ='
 END = 'END'.ljust(80)
+NEWLINE = '\n'
 
 KEYWORDS_FROM_FILE = [
     "SIMPLE", "XTENSION", "BITPIX", "NAXIS", "NAXIS1", "NAXIS2", "NAXIS3", "NAXIS4",
@@ -36,11 +37,11 @@ hasSkippedFirstHdu = False
 
 def log(msg):
     if debug:
-        print >> sys.stderr, msg
+        sys.stderr.write(msg + NEWLINE)
 
 
 def error(msg):
-    print >> sys.stderr, msg
+    sys.stderr.write(msg + NEWLINE)
 
 
 def dbrcGet(alias):
